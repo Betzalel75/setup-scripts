@@ -1,0 +1,95 @@
+
+services:
+  # ==========================================
+  # JOUEUR 1 (Port 4281)
+  # ==========================================
+  dvwa1:
+    image: ghcr.io/digininja/dvwa:latest
+    environment:
+      - DB_SERVER=db1
+    depends_on:
+      - db1
+    networks:
+      - net_p1
+    ports:
+      - "0.0.0.0:4281:80"
+    restart: unless-stopped
+
+  db1:
+    image: docker.io/library/mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    volumes:
+      - dvwa_db1:/var/lib/mysql
+    networks:
+      - net_p1
+    restart: unless-stopped
+
+  # ==========================================
+  # JOUEUR 2 (Port 4282)
+  # ==========================================
+  dvwa2:
+    image: ghcr.io/digininja/dvwa:latest
+    environment:
+      - DB_SERVER=db2
+    depends_on:
+      - db2
+    networks:
+      - net_p2
+    ports:
+      - "0.0.0.0:4282:80"
+    restart: unless-stopped
+
+  db2:
+    image: docker.io/library/mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    volumes:
+      - dvwa_db2:/var/lib/mysql
+    networks:
+      - net_p2
+    restart: unless-stopped
+
+  # ==========================================
+  # JOUEUR 3 (Port 4283)
+  # ==========================================
+  dvwa3:
+    image: ghcr.io/digininja/dvwa:latest
+    environment:
+      - DB_SERVER=db3
+    depends_on:
+      - db3
+    networks:
+      - net_p3
+    ports:
+      - "0.0.0.0:4283:80"
+    restart: unless-stopped
+
+  db3:
+    image: docker.io/library/mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    volumes:
+      - dvwa_db3:/var/lib/mysql
+    networks:
+      - net_p3
+    restart: unless-stopped
+
+volumes:
+  dvwa_db1:
+  dvwa_db2:
+  dvwa_db3:
+
+networks:
+  net_p1:
+  net_p2:
+  net_p3:
