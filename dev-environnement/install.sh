@@ -242,7 +242,7 @@ function main() {
     log_info "Installation de Starship..."
     if curl -sS https://starship.rs/install.sh | sh -s -- -y; then
         mkdir -p ~/.config
-        if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/dev-environnement/starship.toml -O ~/.config/starship.toml; then
+        if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/starship.toml -O ~/.config/starship.toml; then
             log_success "Configuration Starship téléchargée"
         fi
     fi
@@ -274,11 +274,11 @@ function main() {
     
     # Télécharger la configuration personnalisée
     log_info "Configuration de Zsh..."
-    if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/dev-environnement/zshrc -O ~/.zshrc; then
+    if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/zshrc -O ~/.zshrc; then
         log_success "Configuration Zsh téléchargée"
     fi
     
-    if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/dev-environnement/aliases.zsh -O "$zsh_custom/aliases.zsh"; then
+    if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/aliases.zsh -O "$zsh_custom/aliases.zsh"; then
         log_success "Aliases téléchargés"
     fi
     
