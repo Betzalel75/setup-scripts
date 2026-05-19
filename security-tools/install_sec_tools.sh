@@ -83,7 +83,7 @@ log_warning "Vous devrez redémarrer votre session pour que les changements pren
 # 2. Outils web (ZAP)
 # -------------------------------------------------------------------
 log_step "Installation d'OWASP ZAP (alternative à Burp)"
-flatpak install flathub org.zaproxy.ZAP
+flatpak install flathub org.zaproxy.ZAP --system -y
 
 # -------------------------------------------------------------------
 # 3. Brute-force / cracking
@@ -139,7 +139,7 @@ log_success "Outils Python installés."
 log_step "Installation des outils de reverse engineering"
 
 apt install -y radare2
-flatpak install flathub org.ghidra_sre.Ghidra
+flatpak install flathub org.ghidra_sre.Ghidra  --system -y
 
 # -------------------------------------------------------------------
 # 7. OSINT

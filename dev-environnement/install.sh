@@ -31,13 +31,6 @@ function is_installed() {
 }
 
 function install_go() {
-    log_info "Installation de Go..."
-
-    if is_installed "go"; then
-        log_success "Go est déjà installé"
-        return 0
-    fi
-    
     local arch
     arch=$(uname -m)
     
@@ -162,14 +155,29 @@ function install_tldr() {
     fi
 }
 
-function install_docker() {
-    log_info "Installation de Docker..."
-
-    if is_installed docker; then
-        log_warning "Docker est déjà installé"
-        return 0
+function install_deepseek() {
+    log_info "Installation de DeepSeek..."
+    if cargo install deepseek-tui --locked; then
+        log_success "DeepSeek installé"
+        echo "DeepSeek version: $(deepseek-tui --version 2>/dev/null || echo "Non détecté")"
+    else
+        log_error "Échec de l'installation de DeepSeek"
+        return 1
     fi
+}
 
+function install_dioxus() {
+    log_info "Installation de Dioxus..."
+    if cargo binstall dioxus-cli --force; then
+        log_success "Dioxus installé"
+        echo "Dioxus version: $(dx --version 2>/dev/null || echo "Non détecté")"
+    else
+        log_error "Échec de l'installation de Dioxus"
+        return 1
+    fi
+}
+
+function install_docker() {
     sudo apt update
     sudo apt install -y ca-certificates curl gnupg
 
@@ -250,6 +258,25 @@ function install_fastfetch() {
     log_info "Installation de fastfetch..."
     sudo apt install -y fastfetch
     log_success "fastfetch installé"
+}
+
+function install_ghostty() {
+    log_info "Installation de ghostty..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
+    log_success "ghostty installé"
+}
+
+function install_iriun_webcam() {
+    log_info "Installation de Iriun Webcam..."
+    wget -O iriun.deb "https://iriun.gitlab.io/iriunwebcam-2.9.1.deb"
+    sudo apt install -y ./iriun.deb
+    log_success "Iriun Webcam installé"
+}
+
+function install_flatpaks() {
+    log_info "Installation des paquets Flatpak..."
+    xargs -a ~/liste_flatpaks.txt flatpak install --system -y
+    log_success "Flatpak installé"
 }
 
 function main() {
@@ -352,6 +379,11 @@ function main() {
             "tldr:install_tldr"
             "Helix:install_helix"
             "ShellCheck:install_shellcheck"
+            "Dioxus:install_dioxus"
+            "Ghostty:install_ghostty"
+            "Iriunwebcam:install_iriun_webcam"
+            "DeepSeek-tui:install_deepseek"
+            "flatpak:install_flatpaks"
         )
 
         for tool in "${tools[@]}"; do
@@ -361,6 +393,12 @@ function main() {
             read -p "Installer $name? (y/n) " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
+                local package_name
+                package_name=$(echo "$name" | tr '[:upper:]' '[:lower:]')
+                if is_installed "$package_name" && "$package_name" != "flatpak"; then
+                    log_info "$name est déjà installé"
+                    continue
+                fi
                 log_info "Installation de $name..."
                 if $function; then
                     log_success "$name installé avec succès"

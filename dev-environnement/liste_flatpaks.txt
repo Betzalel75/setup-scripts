@@ -1,0 +1,12 @@
+com.discordapp.Discord
+com.github.tchx84.Flatseal
+com.heroicgameslauncher.hgl
+com.obsproject.Studio
+com.rtosta.zapzap
+com.rustdesk.RustDesk
+com.vysp3r.ProtonPlus
+io.github.db_mobile.resonance
+io.github.pieterdd.RcloneShuttle
+org.dupot.easyflatpak
+org.gimp.GIMP
+org.kde.kdenlive
