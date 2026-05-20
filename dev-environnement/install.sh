@@ -296,6 +296,8 @@ function install_font() {
 
 function install_fastfetch() {
     log_info "Installation de fastfetch..."
+    sudo add-apt-repository ppa:zhangsongcui3371/fastfetch
+    sudo apt update
     sudo apt install -y fastfetch
     log_success "fastfetch installé"
 }
