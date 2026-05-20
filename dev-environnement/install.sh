@@ -11,6 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 INSTALL_ALL=false
+FORCE_OVERWRITE=false
 TOOLS=(
     "Bun:install_bun"
     "Node.js:install_nodejs"
@@ -33,6 +34,7 @@ function usage() {
     echo ""
     echo "Options:"
     echo "  -a, --all       Installer tous les outils de développement sans confirmation"
+    echo "  -f, --force      Forcer le remplacement des fichiers de configuration existants"
     echo "  -l, --list      Lister les outils disponibles"
     echo "  -h, --help      Afficher cette aide"
     echo ""
@@ -46,6 +48,7 @@ function usage() {
     echo "  $0 --all                              # Tout installer"
     echo "  $0                                    # Mode interactif"
     echo "  $0 Docker Rust Go                     # Installer uniquement Docker, Rust et Go"
+    echo "  $0 --force Docker                     # Forcer le remplacement des configs + installer Docker"
     echo "  $0 Node.js Bun Helix                  # Installer Node.js, Bun et Helix"
     exit 0
 }
@@ -259,8 +262,6 @@ function install_shellcheck() {
 }
 
 function install_font() {
-    log_info "Installation des polices..."
-
     FONTS_DIR="$HOME/.local/share/fonts"
     mkdir -p "$FONTS_DIR"
 
@@ -270,8 +271,16 @@ function install_font() {
         "Hack"
     )
 
+    local font_installed=false
     for font in "${fonts[@]}"; do
-        log_info "Installation de $font..."
+        # Vérifier si la police est déjà installée
+        if fc-list | grep -qi "$font" 2>/dev/null; then
+            log_info "$font déjà installée"
+            font_installed=true
+            continue
+        fi
+
+        log_info "Téléchargement de $font..."
         local zip_file="/tmp/${font}.zip"
         local extract_dir="/tmp/${font}"
 
@@ -285,13 +294,18 @@ function install_font() {
             done
 
             log_success "$font installée"
+            font_installed=true
         else
             log_error "Échec du téléchargement de $font"
         fi
     done
 
-    fc-cache -fv
-    log_success "Polices installées et cache mis à jour"
+    if [[ "$font_installed" == true ]]; then
+        fc-cache -fv
+        log_success "Cache des polices mis à jour"
+    else
+        log_info "Toutes les polices étaient déjà installées"
+    fi
 }
 
 function install_fastfetch() {
@@ -387,6 +401,10 @@ function main() {
                 INSTALL_ALL=true
                 shift
                 ;;
+            -f|--force)
+                FORCE_OVERWRITE=true
+                shift
+                ;;
             -l|--list)
                 log_info "Outils disponibles:"
                 for tool in "${TOOLS[@]}"; do
@@ -402,6 +420,7 @@ function main() {
                 usage
                 ;;
             *)
+                # Ajouter l'outil à la liste de sélection
                 selected_tools+=("$1")
                 shift
                 ;;
@@ -441,11 +460,24 @@ function main() {
 
     # Installer starship
     log_info "Installation de Starship..."
-    if curl -sS https://starship.rs/install.sh | sh -s -- -y; then
+    if ! is_installed starship; then
+        if curl -sS https://starship.rs/install.sh | sh -s -- -y; then
+            log_success "Starship installé"
+        else
+            log_error "Échec de l'installation de Starship"
+        fi
+    else
+        log_success "Starship déjà installé"
+    fi
+
+    # Config Starship
+    if [[ ! -f ~/.config/starship.toml ]] || [[ "$FORCE_OVERWRITE" == true ]]; then
         mkdir -p ~/.config
         if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/starship.toml -O ~/.config/starship.toml; then
             log_success "Configuration Starship téléchargée"
         fi
+    else
+        log_info "Configuration Starship déjà présente (utilisez --force pour remplacer)"
     fi
 
     # Installer zsh
@@ -473,17 +505,27 @@ function main() {
         git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$zsh_custom/plugins/zsh-syntax-highlighting"
     fi
 
-    # Télécharger la configuration personnalisée
-    log_info "Configuration de Zsh..."
-    if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/zshrc -O ~/.zshrc; then
-        log_success "Configuration Zsh téléchargée"
+    # Configuration Zsh (.zshrc)
+    if [[ ! -f ~/.zshrc ]] || [[ "$FORCE_OVERWRITE" == true ]]; then
+        log_info "Téléchargement de la configuration Zsh..."
+        if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/zshrc -O ~/.zshrc; then
+            log_success "Configuration Zsh téléchargée"
+        fi
+    else
+        log_info "Fichier ~/.zshrc déjà présent (utilisez --force pour remplacer)"
     fi
 
-    if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/aliases.zsh -O "$zsh_custom/aliases.zsh"; then
-        log_success "Aliases téléchargés"
+    # Configuration des aliases
+    if [[ ! -f "$zsh_custom/aliases.zsh" ]] || [[ "$FORCE_OVERWRITE" == true ]]; then
+        log_info "Téléchargement des aliases..."
+        if wget -q https://raw.githubusercontent.com/Betzalel75/setup-scripts/refs/heads/main/dev-environnement/aliases.zsh -O "$zsh_custom/aliases.zsh"; then
+            log_success "Aliases téléchargés"
+        fi
+    else
+        log_info "Fichier aliases.zsh déjà présent (utilisez --force pour remplacer)"
     fi
 
-    # Installer les polices
+    # Installer les polices (seulement si absentes)
     install_font
 
     # Installer zsh-history-substring-search
