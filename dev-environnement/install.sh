@@ -10,6 +10,46 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+INSTALL_ALL=false
+TOOLS=(
+    "Bun:install_bun"
+    "Node.js:install_nodejs"
+    "Rust:install_rust"
+    "Go:install_go"
+    "Docker:install_docker"
+    "tldr:install_tldr"
+    "Helix:install_helix"
+    "ShellCheck:install_shellcheck"
+    "Dioxus:install_dioxus"
+    "Ghostty:install_ghostty"
+    "Iriunwebcam:install_iriun_webcam"
+    "DeepSeek-tui:install_deepseek"
+    "flatpak:install_flatpaks"
+    "Zed:install_zed"
+)
+
+function usage() {
+    echo "Usage: $0 [OPTIONS] [TOOLS...]"
+    echo ""
+    echo "Options:"
+    echo "  -a, --all       Installer tous les outils de développement sans confirmation"
+    echo "  -l, --list      Lister les outils disponibles"
+    echo "  -h, --help      Afficher cette aide"
+    echo ""
+    echo "Outils disponibles:"
+    for tool in "${TOOLS[@]}"; do
+        local name="${tool%:*}"
+        echo "  $name"
+    done
+    echo ""
+    echo "Exemples:"
+    echo "  $0 --all                              # Tout installer"
+    echo "  $0                                    # Mode interactif"
+    echo "  $0 Docker Rust Go                     # Installer uniquement Docker, Rust et Go"
+    echo "  $0 Node.js Bun Helix                  # Installer Node.js, Bun et Helix"
+    exit 0
+}
+
 function log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -33,7 +73,7 @@ function is_installed() {
 function install_go() {
     local arch
     arch=$(uname -m)
-    
+
     case "$arch" in
         x86_64) arch="amd64" ;;
         aarch64) arch="arm64" ;;
@@ -58,16 +98,16 @@ function install_go() {
         rm -f "$archive_file"
         return 1
     }
-    
+
     log_info "Installation de Go dans /usr/local..."
     sudo rm -rf /usr/local/go
     sudo tar -C /usr/local -xzf "$archive_file"
-    
+
     export PATH=$PATH:/usr/local/go/bin
-    
+
     local path_export="export PATH=$PATH:/usr/local/go/bin"
     local shell_rc
-    
+
     if [ -n "$ZSH_VERSION" ]; then
         shell_rc="$HOME/.zshrc"
     elif [ -n "$BASH_VERSION" ]; then
@@ -75,12 +115,12 @@ function install_go() {
     else
         shell_rc="$HOME/.profile"
     fi
-    
+
     if ! grep -q "/usr/local/go/bin" "$shell_rc" 2>/dev/null; then
         log_info "Configuration des variables d'environnement dans $shell_rc..."
         log_info "# Ajout de Go au PATH\n$path_export" >> "$shell_rc"
     fi
-    
+
     [[ "$archive_file" == /tmp/* ]] && rm -f "$archive_file"
 }
 
@@ -279,7 +319,93 @@ function install_flatpaks() {
     log_success "Flatpak installé"
 }
 
+function install_zed() {
+    log_info "Installation de Zed..."
+    curl -f https://zed.dev/install.sh | sh
+    log_success "Zed installé"
+}
+
+function install_all_tools() {
+    log_info "Installation de tous les outils de développement..."
+    for tool in "${TOOLS[@]}"; do
+        local name="${tool%:*}"
+        local func="${tool#*:}"
+        log_info "Installation de $name..."
+        if $func; then
+            log_success "$name installé avec succès"
+        else
+            log_error "Échec de l'installation de $name"
+        fi
+    done
+}
+
+function install_dev_tools_interactive() {
+    log_info "Installation des outils de développement..."
+
+    read -p "Voulez-vous installer les outils de développement? (Go, Node.js, Rust, Docker, etc.) [y/n/A (all)] " -n 1 -r
+    echo
+
+    case "$REPLY" in
+        [Aa]*)
+            install_all_tools
+            return
+            ;;
+        [Nn]*)
+            log_info "Installation des outils de développement ignorée."
+            return
+            ;;
+        [Yy]*)
+            for tool in "${TOOLS[@]}"; do
+                local name="${tool%:*}"
+                local func="${tool#*:}"
+                read -p "Installer $name? (y/n) " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    log_info "Installation de $name..."
+                    if $func; then
+                        log_success "$name installé avec succès"
+                    else
+                        log_error "Échec de l'installation de $name"
+                    fi
+                fi
+            done
+            ;;
+        *)
+            log_info "Installation des outils de développement ignorée."
+            return
+            ;;
+    esac
+}
+
 function main() {
+    local selected_tools=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -a|--all)
+                INSTALL_ALL=true
+                shift
+                ;;
+            -l|--list)
+                log_info "Outils disponibles:"
+                for tool in "${TOOLS[@]}"; do
+                    echo "  ${tool%:*}"
+                done
+                exit 0
+                ;;
+            -h|--help)
+                usage
+                ;;
+            -*)
+                log_error "Option inconnue : $1"
+                usage
+                ;;
+            *)
+                selected_tools+=("$1")
+                shift
+                ;;
+        esac
+    done
+
     log_info "Début de l'installation..."
 
     if [[ $EUID -eq 0 ]]; then
@@ -363,50 +489,34 @@ function main() {
         git clone https://github.com/zsh-users/zsh-history-substring-search.git "$zsh_custom/plugins/zsh-history-substring-search"
     fi
 
-    # Proposer l'installation des outils de développement
-    log_info "Installation des outils de développement..."
-
-    read -p "Voulez-vous installer les outils de développement? (Go, Node.js, Rust, Docker, etc.) (y/n) " -n 1 -r
-    echo
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        local tools=(
-            "Bun:install_bun"
-            "Node.js:install_nodejs"
-            "Rust:install_rust"
-            "Go:install_go"
-            "Docker:install_docker"
-            "tldr:install_tldr"
-            "Helix:install_helix"
-            "ShellCheck:install_shellcheck"
-            "Dioxus:install_dioxus"
-            "Ghostty:install_ghostty"
-            "Iriunwebcam:install_iriun_webcam"
-            "DeepSeek-tui:install_deepseek"
-            "flatpak:install_flatpaks"
-        )
-
-        for tool in "${tools[@]}"; do
-            local name="${tool%:*}"
-            local function="${tool#*:}"
-
-            read -p "Installer $name? (y/n) " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                local package_name
-                package_name=$(echo "$name" | tr '[:upper:]' '[:lower:]')
-                if is_installed "$package_name" && "$package_name" != "flatpak"; then
-                    log_info "$name est déjà installé"
-                    continue
+    # Installer les outils de développement
+    if [[ "$INSTALL_ALL" == true ]]; then
+        install_all_tools
+    elif [[ ${#selected_tools[@]} -gt 0 ]]; then
+        log_info "Installation des outils sélectionnés..."
+        for selected in "${selected_tools[@]}"; do
+            local found=false
+            for tool in "${TOOLS[@]}"; do
+                local name="${tool%:*}"
+                local func="${tool#*:}"
+                if [[ "${selected,,}" == "${name,,}" ]]; then
+                    found=true
+                    log_info "Installation de $name..."
+                    if $func; then
+                        log_success "$name installé avec succès"
+                    else
+                        log_error "Échec de l'installation de $name"
+                    fi
+                    break
                 fi
-                log_info "Installation de $name..."
-                if $function; then
-                    log_success "$name installé avec succès"
-                else
-                    log_error "Échec de l'installation de $name"
-                fi
+            done
+            if [[ "$found" == false ]]; then
+                log_warning "Outil inconnu : '$selected'"
+                log_info "Utilisez --list pour voir les outils disponibles"
             fi
         done
+    else
+        install_dev_tools_interactive
     fi
 
     # Changer le shell par défaut
